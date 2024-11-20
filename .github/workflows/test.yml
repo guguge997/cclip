@@ -1,6 +1,5 @@
 name: Build Multi-Platform Docker
 
-# 不设置触发条件
 on:
   workflow_dispatch:  # 手动触发工作流
     inputs:
@@ -35,13 +34,17 @@ jobs:
             --output type=local,dest=output \
             -t ${{ github.event.inputs.image_name }}:latest .
 
-      # Step 4: 压缩导出的镜像
+      # Step 4: 等待文件释放，避免冲突
+      - name: Wait for Build Completion
+        run: sleep 5  # 确保 Buildx 的输出文件已完成写入
+
+      # Step 5: 压缩导出的镜像
       - name: Compress Docker Image
         run: |
-          tar -czf output/docker-image.tar.gz -C output .
-          echo "TAR_PATH=$PWD/output/docker-image.tar.gz" >> $GITHUB_ENV
+          tar -czf docker-image.tar.gz -C output .
+          echo "TAR_PATH=$PWD/docker-image.tar.gz" >> $GITHUB_ENV
 
-      # Step 5: 将导出的镜像上传为 Artifact
+      # Step 6: 将导出的镜像上传为 Artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
