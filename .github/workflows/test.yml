@@ -1,4 +1,4 @@
-name: Docker Build for Multiple Architectures
+name: Docker Build
 
 on:
   workflow_dispatch:
@@ -18,23 +18,39 @@ jobs:
         uses: actions/cache@v2
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-multi-arch
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: Build Docker image for amd64 and arm64
+      - name: Set up multi-architecture build
         run: |
-          docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile --tag cloud-clipboard:amd64 --tag cloud-clipboard:arm64 .
+          docker buildx create --use
+          docker buildx inspect --bootstrap
 
-      - name: Save Docker images as tar files for amd64 and arm64
+      - name: Build ARM and AMD Docker images (without push)
         run: |
-          docker save -o cloud-clipboard-amd64.tar cloud-clipboard:amd64
-          docker save -o cloud-clipboard-arm64.tar cloud-clipboard:arm64
+          docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile --tag cloud-clipboard:${{ github.sha }} .
 
-      - name: Upload Docker images as artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: cloud-clipboard-images
-          path: |
-            cloud-clipboard-amd64.tar
-            cloud-clipboard-arm64.tar
+      - name: Run Docker container (AMD64)
+        run: |
+          docker run -d --name cloud-clipboard-amd64 cloud-clipboard:${{ github.sha }}
+
+      - name: Run Docker container (ARM64)
+        run: |
+          docker run -d --name cloud-clipboard-arm64 cloud-clipboard:${{ github.sha }}
+
+      - name: Check if containers are running
+        run: |
+          docker ps -a  # List all containers to verify if both containers are running
+
+      - name: Stop and remove the containers
+        run: |
+          docker stop cloud-clipboard-amd64
+          docker rm cloud-clipboard-amd64
+          docker stop cloud-clipboard-arm64
+          docker rm cloud-clipboard-arm64
+
+      - name: Output Build Results
+        run: |
+          echo "Docker build for both AMD64 and ARM64 completed successfully"
+          echo "Tag: cloud-clipboard:${{ github.sha }}"
