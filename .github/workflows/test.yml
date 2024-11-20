@@ -1,0 +1,61 @@
+name: Docker Build for Multiple Architectures
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-multi-arch
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Build Docker image for amd64 and arm64
+        run: |
+          docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile --tag cloud-clipboard:amd64 --tag cloud-clipboard:arm64 --push .
+
+      - name: Save Docker images as tar files for amd64 and arm64
+        run: |
+          docker pull cloud-clipboard:amd64
+          docker pull cloud-clipboard:arm64
+          docker save -o cloud-clipboard-amd64.tar cloud-clipboard:amd64
+          docker save -o cloud-clipboard-arm64.tar cloud-clipboard:arm64
+
+      - name: Upload Docker images as artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: cloud-clipboard-images
+          path: |
+            cloud-clipboard-amd64.tar
+            cloud-clipboard-arm64.tar
+
+      - name: Run Docker container (amd64)
+        run: |
+          docker run -d --name cloud-clipboard-amd64 cloud-clipboard:amd64
+
+      - name: Run Docker container (arm64)
+        run: |
+          docker run -d --name cloud-clipboard-arm64 cloud-clipboard:arm64
+
+      - name: Check if containers are running
+        run: |
+          docker ps -a
+
+      - name: Stop and remove the containers
+        run: |
+          docker stop cloud-clipboard-amd64
+          docker rm cloud-clipboard-amd64
+          docker stop cloud-clipboard-arm64
+          docker rm cloud-clipboard-arm64
