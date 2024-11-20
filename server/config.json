@@ -1,16 +1,16 @@
 {
     "server": {
-        "host": "192.168.1.136",
+        "host": "0.0.0.0",
         "port": 9501,
         "wss": false,
-        "history": 10,
+        "history": 20,
         "auth": false
     },
     "text": {
         "limit": 4096
     },
     "file": {
-        "expire": 3600,
+        "expire": 172800,
         "chunk": 2097152,
         "limit": 268435456
     }
