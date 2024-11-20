@@ -1,0 +1,68 @@
+name: Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: 设置 Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Step 3: 构建 AMD64 的 Docker 镜像
+      - name: Build AMD64 Image
+        id: build_amd64
+        run: |
+          mkdir -p output
+          docker buildx build \
+            --platform linux/amd64 \
+            --file Dockerfile \
+            --output type=docker,dest=output/amd64-image.tar \
+            -t cloud-clipboard:amd64 .
+
+      # Step 4: 等待文件释放（AMD64）
+      - name: Wait for AMD64 File Release
+        run: sleep 5  # 等待 5 秒，确保文件释放
+
+      # Step 5: 构建 ARM64 的 Docker 镜像
+      - name: Build ARM64 Image
+        id: build_arm64
+        run: |
+          mkdir -p output
+          docker buildx build \
+            --platform linux/arm64 \
+            --file Dockerfile \
+            --output type=docker,dest=output/arm64-image.tar \
+            -t cloud-clipboard:arm64 .
+
+      # Step 6: 等待文件释放（ARM64）
+      - name: Wait for ARM64 File Release
+        run: sleep 5  # 等待 5 秒，确保文件释放
+
+      # Step 7: 压缩导出的镜像文件
+      - name: Compress Docker Images
+        run: |
+          tar -czf output/amd64-image.tar.gz -C output amd64-image.tar
+          tar -czf output/arm64-image.tar.gz -C output arm64-image.tar
+          echo "AMD_TAR=$PWD/output/amd64-image.tar.gz" >> $GITHUB_ENV
+          echo "ARM_TAR=$PWD/output/arm64-image.tar.gz" >> $GITHUB_ENV
+
+      # Step 8: 上传镜像文件为 Artifact
+      - name: Upload AMD64 Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-image-amd64
+          path: ${{ env.AMD_TAR }}
+
+      - name: Upload ARM64 Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-image-arm64
+          path: ${{ env.ARM_TAR }}
