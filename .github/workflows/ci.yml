@@ -61,3 +61,12 @@ jobs:
         with:
           name: static-${{ runner.os }}
           path: server-node/static
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build Docker image for ARM and AMD
+        if: runner.os == 'Linux'
+        run: |
+          docker buildx create --use
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            -t cloud-clipboard:latest .
