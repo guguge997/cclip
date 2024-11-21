@@ -7,7 +7,7 @@
         "auth": false
     },
     "text": {
-        "limit": 4096
+        "limit": 16384
     },
     "file": {
         "expire": 172800,
