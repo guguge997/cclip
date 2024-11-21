@@ -15,14 +15,14 @@ if (!process.argv[2] && !fs.existsSync(defaultConfigPath)) {
             prefix: '',
             key: null,
             cert: null,
-            history: 10,
+            history: 20,
             auth: false,
         },
         text: {
-            limit: 4096,
+            limit: 16384,
         },
         file: {
-            expire: 3600,
+            expire: 172800,
             chunk: 2097152,
             limit: 268435456,
         },
